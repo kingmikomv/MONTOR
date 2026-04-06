@@ -1,0 +1,186 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClientSecure.h>
+
+// ==========================
+// WIFI UTAMA (ISP)
+// ==========================
+const char* wifiUtama = "Hiya Hiya Hiya";
+const char* passUtama = "lahyambuhbliweruh";
+
+// ==========================
+// WIFI CADANGAN (USB / HOTSPOT)
+// ==========================
+const char* wifiCadangan = "koclox";
+const char* passCadangan = "1234678!!!";
+
+// ==========================
+// DOMAIN HOSTING / API
+// Ganti nanti dengan domain hosting
+// ==========================
+String apiUrl = "https://domainkamu.com/api/status-internet";
+
+// ==========================
+bool pakaiCadangan = false;
+bool statusDownTerkirim = false;
+
+// ==========================
+// CEK INTERNET BENAR-BENAR
+// ==========================
+bool cekInternet() {
+  WiFiClient client;
+  return client.connect("8.8.8.8", 53);
+}
+
+// ==========================
+// KONEK WIFI
+// ==========================
+bool konekWifi(const char* ssid, const char* pass) {
+
+  WiFi.disconnect();
+  delay(1000);
+
+  Serial.println("Menghubungkan ke: " + String(ssid));
+
+  WiFi.begin(ssid, pass);
+
+  int retry = 0;
+
+  while (WiFi.status() != WL_CONNECTED && retry < 20) {
+    delay(500);
+    Serial.print(".");
+    retry++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("");
+    Serial.println("WiFi connected!");
+    Serial.print("IP: ");
+    Serial.println(WiFi.localIP());
+    return true;
+  }
+
+  Serial.println("");
+  Serial.println("Gagal konek");
+  return false;
+}
+
+// ==========================
+// KIRIM STATUS KE LARAVEL
+// ==========================
+void kirimStatus(String status) {
+
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi belum konek");
+    return;
+  }
+
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  HTTPClient http;
+
+  Serial.println("Kirim ke:");
+  Serial.println(apiUrl);
+
+  if (!http.begin(client, apiUrl)) {
+    Serial.println("HTTP begin gagal");
+    return;
+  }
+
+  http.addHeader("Content-Type", "application/json");
+
+  String payload = "{\"status\":\"" + status + "\"}";
+
+  int httpCode = http.POST(payload);
+
+  Serial.print("HTTP CODE: ");
+  Serial.println(httpCode);
+
+  if (httpCode > 0) {
+    String response = http.getString();
+    Serial.println("Response:");
+    Serial.println(response);
+  } else {
+    Serial.print("Error detail: ");
+    Serial.println(http.errorToString(httpCode));
+  }
+
+  http.end();
+}
+
+// ==========================
+// SETUP
+// ==========================
+void setup() {
+  Serial.begin(115200);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+
+  konekWifi(wifiUtama, passUtama);
+}
+
+// ==========================
+// LOOP
+// ==========================
+void loop() {
+
+  // ======================
+  // MODE WIFI UTAMA
+  // ======================
+  if (!pakaiCadangan) {
+
+    if (!cekInternet()) {
+
+      Serial.println("ISP DOWN -> pindah ke cadangan");
+
+      if (konekWifi(wifiCadangan, passCadangan)) {
+
+        pakaiCadangan = true;
+
+        if (!statusDownTerkirim) {
+          kirimStatus("down");
+          statusDownTerkirim = true;
+        }
+
+      }
+
+    }
+
+  }
+
+  // ======================
+  // MODE WIFI CADANGAN
+  // ======================
+  else {
+
+    Serial.println("Cek ISP utama kembali...");
+
+    if (konekWifi(wifiUtama, passUtama)) {
+
+      if (cekInternet()) {
+
+        Serial.println("ISP kembali normal");
+
+        kirimStatus("up");
+
+        pakaiCadangan = false;
+        statusDownTerkirim = false;
+
+      } else {
+
+        Serial.println("ISP masih down, balik ke cadangan");
+
+        konekWifi(wifiCadangan, passCadangan);
+      }
+
+    } else {
+
+      konekWifi(wifiCadangan, passCadangan);
+    }
+
+  }
+
+  delay(15000);
+}

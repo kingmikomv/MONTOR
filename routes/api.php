@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\PppInternetController;
 use App\Http\Controllers\TelegramController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -41,3 +42,4 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/mikrotik/event', [MonitoringController::class, 'event']);
 Route::post('/telegram/webhook', [TelegramController::class, 'webhook']);
+Route::post('/status-internet', [PppInternetController::class, 'updateStatus']);
