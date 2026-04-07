@@ -22,10 +22,16 @@ class TelegramController extends Controller
         if (isset($data['message'])) {
             $chat_id = $data['message']['from']['id'] ?? null;
             $text = $data['message']['text'] ?? '';
-                        \Log::info($chat_id);
 
+            \Log::info('CHAT ID', ['id' => $chat_id]);
+
+            // ✅ COMMAND
             if ($text == '/start') {
                 $this->telegram->sendToChat($chat_id, 'Silakan kirim username PPPoE anda');
+            
+            } elseif ($text == '/ambil_id') {
+                $this->telegram->sendToChat($chat_id, "🆔 Chat ID kamu: <code>{$chat_id}</code>");
+            
             } else {
                 $pelanggan = Pelanggan::where('username_pppoe', $text)->first();
 
