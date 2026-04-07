@@ -143,15 +143,36 @@
     <script>
         $(document).on('click', '.btn-script', function () {
 
-            let kode = $(this).data('kode');
-            let domain = window.location.origin;
+           let kode = $(this).data('kode');
+let domain = window.location.origin;
 
-            let scriptUp = `:local user $user
-/tool fetch url="${domain}/mikrotik/event?server=${kode}&user=$user&status=online" keep-result=no`;
+// ONLINE (lengkap dengan IP)
+let scriptUp = `:local server "${kode}"
+:local user $user
 
-            let scriptDown = `:local user $user
-/tool fetch url="${domain}/mikrotik/event?server=${kode}&user=$user&status=offline" keep-result=no`;
+/tool fetch url=("${domain}/api/mikrotik/event?server=" . $server . "&user=" . $user . "&status=online&ip=" . $remote-address) keep-result=no`;
 
+// OFFLINE (dengan retry seperti script bawah)
+let scriptDown = `:local server "${kode}"
+:local u $user
+
+:local retry 0
+:local maxRetry 5
+
+:while ($retry < $maxRetry) do={
+
+    :local cek [/ppp active find where name=$u]
+
+    :if ([:len $cek] = 0) do={
+
+        /tool fetch url=("${domain}/api/mikrotik/event?server=" . $server . "&user=" . $u . "&status=offline") keep-result=no
+
+        :set retry $maxRetry
+    } else={
+        :delay 2
+        :set retry ($retry + 1)
+    }
+}`;
             $('#scriptUp').val(scriptUp);
             $('#scriptDown').val(scriptDown);
 
