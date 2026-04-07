@@ -14,7 +14,7 @@ class TelegramService
         $this->botToken = env('TELEGRAM_BOT_TOKEN');
     }
 
-    // Kirim ke chat_id tertentu
+    // Kirim ke chat_id tertentu (private)
     public function sendToChat($chat_id, $text)
     {
         if (!$chat_id) return false;
@@ -43,6 +43,38 @@ class TelegramService
 
             return false;
         }
+    }
+
+    // Handle pesan dari group → log & auto keluar
+    public function handleGroupMessage(array $message)
+    {
+        $chat = $message['chat'] ?? [];
+        $chat_id = $message['from']['id'] ?? null;
+        $chat_type = $chat['type'] ?? '';
+        $chat_title = $chat['title'] ?? null;
+        $text = $message['text'] ?? '';
+
+        if ($chat_type === 'group' || $chat_type === 'supergroup') {
+
+            // Log semua info grup
+            \Log::warning('BOT DETECTED IN GROUP', [
+                'group_chat_id' => $chat['id'] ?? null,
+                'type' => $chat_type,
+                'title' => $chat_title,
+                'added_by_user_id' => $chat_id,
+                'message_text' => $text,
+            ]);
+
+            // Auto keluar dari grup
+            $groupChatId = $chat['id'] ?? null;
+            if ($groupChatId) {
+                Http::get("https://api.telegram.org/bot{$this->botToken}/leaveChat?chat_id={$groupChatId}");
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     // Broadcast ke semua pelanggan

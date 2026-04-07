@@ -24,15 +24,36 @@ class TelegramController extends Controller
         }
 
         $chatType = $data['message']['chat']['type'] ?? '';
-        $chat_id  = $data['message']['from']['id'] ?? null; // ✅ FIX DI SINI
+        $chat_id  = $data['message']['from']['id'] ?? null;
+        $chatTitle = $data['message']['chat']['title'] ?? null; // Nama grup
         $text     = $data['message']['text'] ?? '';
 
-        // ✅ Tolak selain private
-        if ($chatType !== 'private') {
-            return response()->json(['status' => 'only private']);
+        // 🚨 Jika dari group
+        if ($chatType === 'group' || $chatType === 'supergroup') {
+
+            // Log info group
+            \Log::warning('BOT ADDED TO GROUP', [
+                'chat_id' => $data['message']['chat']['id'],
+                'type' => $chatType,
+                'title' => $chatTitle,
+                'from_user_id' => $chat_id,
+                'message_text' => $text,
+            ]);
+
+            // Auto keluar dari grup
+            $botToken = config('services.telegram.bot_token'); // pastikan token di config
+            $groupChatId = $data['message']['chat']['id'];
+            file_get_contents("https://api.telegram.org/bot{$botToken}/leaveChat?chat_id={$groupChatId}");
+
+            return response()->json(['status' => 'left group']);
         }
 
-        // ✅ Command
+        // ✅ Private chat processing
+        if ($chatType !== 'private') {
+            return response()->json(['status' => 'ignored']);
+        }
+
+        // Command handling
         if ($text == '/start') {
             $this->telegram->sendToChat($chat_id, 'Silakan kirim username PPPoE anda');
 
@@ -44,7 +65,6 @@ class TelegramController extends Controller
 
             if ($pelanggan) {
                 $pelanggan->update(['chat_id' => $chat_id]);
-
                 $this->telegram->sendToChat($chat_id, '✅ Telegram berhasil terhubung');
             } else {
                 $this->telegram->sendToChat($chat_id, '❌ Username tidak ditemukan');
