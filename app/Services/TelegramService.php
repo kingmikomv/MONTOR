@@ -14,7 +14,7 @@ class TelegramService
         $this->botToken = env('TELEGRAM_BOT_TOKEN');
     }
 
-    // Kirim ke chat_id tertentu (sudah diperbaiki)
+    // Kirim ke chat_id tertentu
     public function sendToChat($chat_id, $text)
     {
         if (!$chat_id) return false;
@@ -26,56 +26,37 @@ class TelegramService
                 'parse_mode' => 'Markdown',
             ]);
 
-            if ($response->successful()) {
-                return true;
+            if (!$response->successful()) {
+                \Log::error('Telegram response failed', [
+                    'chat_id' => $chat_id,
+                    'body' => $response->body(),
+                ]);
             }
 
-            // Tangani error dari Telegram
-            $errorBody = $response->json();
-            $errorDesc = $errorBody['description'] ?? '';
-
-            \Log::error('Telegram response failed', [
-                'chat_id' => $chat_id,
-                'body' => $response->body(),
-            ]);
-
-            // Jika chat tidak ditemukan atau bot tidak punya akses, hapus chat_id dari database
-            if (str_contains($errorDesc, 'chat not found') || 
-                str_contains($errorDesc, 'bot was blocked') ||
-                str_contains($errorDesc, 'user deactivated')) {
-                $this->removeInvalidChatId($chat_id);
-            }
-
-            return false;
+            return true;
 
         } catch (\Exception $e) {
             \Log::error('Telegram send failed', [
                 'chat_id' => $chat_id,
                 'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
 
-    // Hapus chat_id yang tidak valid dari tabel pelanggan
-    private function removeInvalidChatId($chat_id)
-    {
-        Pelanggan::where('chat_id', $chat_id)->update(['chat_id' => null]);
-        \Log::info('Chat_id tidak valid telah dihapus', ['chat_id' => $chat_id]);
-    }
-
-    // Broadcast ke semua pelanggan (tetap sama, tidak perlu diubah)
+    // Broadcast ke semua pelanggan
     public function broadcastToPelanggan($text)
     {
         $pelanggans = Pelanggan::whereNotNull('chat_id')->get();
 
         foreach ($pelanggans as $p) {
             $this->sendToChat($p->chat_id, $text);
-            usleep(300000);
+            usleep(300000); // delay 0.3 detik anti flood telegram
         }
     }
 
-    // Notifikasi PPPoE pelanggan (tetap sama)
+    // Notifikasi PPPoE pelanggan
     public function notifyPppoe($pelanggan, $status)
     {
         $msg = $status === 'down'
@@ -85,7 +66,7 @@ class TelegramService
         $this->sendToChat($pelanggan->chat_id, $msg);
     }
 
-    // Notifikasi ISP pusat ke semua pelanggan (tetap sama)
+    // Notifikasi ISP pusat ke semua pelanggan
     public function notifyIsp($status)
     {
         $msg = $status === 'down'
