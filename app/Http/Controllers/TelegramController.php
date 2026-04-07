@@ -21,7 +21,10 @@ class TelegramController extends Controller
 
         if (isset($data['message'])) {
             $chat_id = $data['message']['chat']['id'];
+            
             $text = $data['message']['text'] ?? '';
+            \Log::warning('Pesan dari grup diabaikan', ['chat_id' => $chat_id]);
+                        \Log::warning($request->all());
 
             if ($text == '/start') {
                 $this->telegram->sendToChat($chat_id, 'Silakan kirim username PPPoE anda');
