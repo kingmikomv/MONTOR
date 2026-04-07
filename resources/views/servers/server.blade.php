@@ -143,17 +143,13 @@
     <script>
         $(document).on('click', '.btn-script', function () {
 
-           let kode = $(this).data('kode');
-let domain = window.location.origin;
+            let kode = $(this).data('kode');
+            let domain = window.location.origin;
 
-// ONLINE (lengkap dengan IP)
-let scriptUp = `:local server "${kode}"
-:local user $user
+            let scriptUp = `:local user $user
+/tool fetch url="${domain}/mikrotik/event?server=${kode}&user=$user&status=online" keep-result=no`;
 
-/tool fetch url=("${domain}/api/mikrotik/event?server=" . $server . "&user=" . $user . "&status=online&ip=" . $remote-address) keep-result=no`;
-
-// OFFLINE (dengan retry seperti script bawah)
-let scriptDown = `:local server "${kode}"
+            let scriptDown = `:local server "${kode}"
 :local u $user
 
 :local retry 0
@@ -173,6 +169,7 @@ let scriptDown = `:local server "${kode}"
         :set retry ($retry + 1)
     }
 }`;
+
             $('#scriptUp').val(scriptUp);
             $('#scriptDown').val(scriptDown);
 
