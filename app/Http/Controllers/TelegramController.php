@@ -20,19 +20,7 @@ class TelegramController extends Controller
         $data = $request->all();
 
         if (isset($data['message'])) {
-            $chat = $data['message']['chat'];
-            $chat_id = $chat['id'];
-            $chat_type = $chat['type'] ?? '';
-
-            // ✅ Hanya proses pesan dari private chat (personal)
-            if ($chat_type !== 'private') {
-                \Log::info('Abaikan pesan non-private', [
-                    'chat_id' => $chat_id,
-                    'type' => $chat_type
-                ]);
-                return response()->json(['status' => 'ok']);
-            }
-
+            $chat_id = $data['message']['chat']['id'];
             $text = $data['message']['text'] ?? '';
 
             if ($text == '/start') {
