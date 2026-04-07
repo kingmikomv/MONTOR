@@ -19,28 +19,35 @@ class TelegramController extends Controller
     {
         $data = $request->all();
 
-        if (isset($data['message'])) {
-            $chat_id = $data['message']['from']['id'] ?? null;
-            $text = $data['message']['text'] ?? '';
+        if (!isset($data['message'])) {
+            return response()->json(['status' => 'no message']);
+        }
 
-            \Log::info('CHAT ID', ['id' => $chat_id]);
+        $chatType = $data['message']['chat']['type'] ?? '';
+        $chat_id  = $data['message']['from']['id'] ?? null; // ✅ FIX DI SINI
+        $text     = $data['message']['text'] ?? '';
 
-            // ✅ COMMAND
-            if ($text == '/start') {
-                $this->telegram->sendToChat($chat_id, 'Silakan kirim username PPPoE anda');
-            
-            } elseif ($text == '/ambil_id') {
-                $this->telegram->sendToChat($chat_id, "🆔 Chat ID kamu: <code>{$chat_id}</code>");
-            
+        // ✅ Tolak selain private
+        if ($chatType !== 'private') {
+            return response()->json(['status' => 'only private']);
+        }
+
+        // ✅ Command
+        if ($text == '/start') {
+            $this->telegram->sendToChat($chat_id, 'Silakan kirim username PPPoE anda');
+
+        } elseif ($text == '/ambil_id') {
+            $this->telegram->sendToChat($chat_id, "🆔 Chat ID kamu: {$chat_id}");
+
+        } else {
+            $pelanggan = Pelanggan::where('username_pppoe', $text)->first();
+
+            if ($pelanggan) {
+                $pelanggan->update(['chat_id' => $chat_id]);
+
+                $this->telegram->sendToChat($chat_id, '✅ Telegram berhasil terhubung');
             } else {
-                $pelanggan = Pelanggan::where('username_pppoe', $text)->first();
-
-                if ($pelanggan) {
-                    $pelanggan->update(['chat_id' => $chat_id]);
-                    $this->telegram->sendToChat($chat_id, '✅ Telegram berhasil terhubung');
-                } else {
-                    $this->telegram->sendToChat($chat_id, '❌ Username tidak ditemukan');
-                }
+                $this->telegram->sendToChat($chat_id, '❌ Username tidak ditemukan');
             }
         }
 
