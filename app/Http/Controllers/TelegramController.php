@@ -16,30 +16,21 @@ class TelegramController extends Controller
     }
 
     public function webhook(Request $request)
-    {
-        $data = $request->all();
+{
+    $data = $request->all();
+    \Log::info('Webhook data', $data); // lihat semua data mentah
 
-        if (isset($data['message'])) {
-            $chat_id = $data['message']['chat']['id'];
-            
-            $text = $data['message']['text'] ?? '';
-            \Log::warning('Pesan dari grup diabaikan', ['chat_id' => $chat_id]);
-                        \Log::warning($request->all());
+    if (isset($data['message'])) {
+        $chat_id = $data['message']['chat']['id'];
 
-            if ($text == '/start') {
-                $this->telegram->sendToChat($chat_id, 'Silakan kirim username PPPoE anda');
-            } else {
-                $pelanggan = Pelanggan::where('username_pppoe', $text)->first();
-
-                if ($pelanggan) {
-                    $pelanggan->update(['chat_id' => $chat_id]);
-                    $this->telegram->sendToChat($chat_id, '✅ Telegram berhasil terhubung');
-                } else {
-                    $this->telegram->sendToChat($chat_id, '❌ Username tidak ditemukan');
-                }
-            }
+        // Tolak chat_id negatif
+        if ($chat_id < 0) {
+            \Log::warning('Ditolak: chat_id negatif', ['chat_id' => $chat_id]);
+            return response()->json(['status' => 'ignored']);
         }
 
-        return response()->json(['status' => 'ok']);
+        // ... proses seperti biasa
     }
+    return response()->json(['status' => 'ok']);
+}
 }
