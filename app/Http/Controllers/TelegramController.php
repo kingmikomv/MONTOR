@@ -58,7 +58,7 @@ class TelegramController extends Controller
 
                 $this->telegram->sendToChat(
                     $chat_id,
-                    "Format salah.\n\nContoh:\n/kirim tarsiwen@pamayahan"
+                    "Format salah.\n\nContoh:\n/kirim xxx@lokasi"
                 );
 
                 return response()->json(['status' => 'ok']);
@@ -83,7 +83,7 @@ class TelegramController extends Controller
             $usernameBaru = $username . '@' . $from_id;
 
             $pelanggan->update([
-                'username_pppoe' => $usernameBaru
+                'chat_id' => $from_id
             ]);
 
             $this->telegram->sendToChat(
