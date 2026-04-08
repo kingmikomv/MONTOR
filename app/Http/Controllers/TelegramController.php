@@ -52,7 +52,7 @@ class TelegramController extends Controller
         if ($pelanggan) {
 
             $pelanggan->update([
-                'chat_id' => $chat_id
+                'chat_id' => $from_id
             ]);
 
             $this->telegram->sendToChat($chat_id, '✅ Telegram berhasil terhubung');
