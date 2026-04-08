@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pelanggan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Services\TelegramService;
@@ -19,7 +20,6 @@ class TelegramController extends Controller
     {
         $data = $request->all();
 
-        // simpan raw data telegram ke log
         Log::info('Telegram Raw Update', $data);
 
         if (!isset($data['message'])) {
@@ -31,48 +31,72 @@ class TelegramController extends Controller
         $from_id  = $data['message']['from']['id'] ?? null;
         $text     = trim($data['message']['text'] ?? '');
 
-        // log info user telegram
-        Log::info('Telegram User Info', [
-            'from_id' => $from_id,
-            'chat_id' => $chat_id,
-            'text' => $text
-        ]);
-
-        // hanya respon chat private
         if ($chatType !== 'private') {
             return response()->json(['status' => 'ignored']);
         }
 
-        // command /start
+        // START
         if ($text === '/start') {
 
             $msg  = "👋 Selamat datang\n\n";
-            $msg .= "Untuk menghubungkan Telegram dengan sistem ISP.\n\n";
-            $msg .= "📌 ID Telegram Anda:\n";
+            $msg .= "🆔 User ID Telegram Anda:\n";
             $msg .= $from_id."\n\n";
-            $msg .= "Silakan kirim ID ini ke admin untuk diaktifkan.";
+            $msg .= "Kirim username Anda:\n";
+            $msg .= "/kirim tarsiwen@pamayahan";
 
             $this->telegram->sendToChat($chat_id, $msg);
 
             return response()->json(['status' => 'ok']);
         }
 
-        // command /id
-        if ($text === '/id') {
+        // /kirim username
+        if (strpos($text, '/kirim') === 0) {
 
-            $msg  = "🆔 ID Telegram Anda:\n\n";
-            $msg .= $from_id."\n\n";
-            $msg .= "Kirim ID ini ke admin.";
+            $parts = explode(' ', $text);
 
-            $this->telegram->sendToChat($chat_id, $msg);
+            if (count($parts) < 2) {
+
+                $this->telegram->sendToChat(
+                    $chat_id,
+                    "Format salah.\n\nContoh:\n/kirim tarsiwen@pamayahan"
+                );
+
+                return response()->json(['status' => 'ok']);
+            }
+
+            $username = trim($parts[1]);
+
+            // cek username awal
+            $pelanggan = Pelanggan::where('username_pppoe', $username)->first();
+
+            if (!$pelanggan) {
+
+                $this->telegram->sendToChat(
+                    $chat_id,
+                    "❌ Username tidak ditemukan"
+                );
+
+                return response()->json(['status' => 'ok']);
+            }
+
+            // update username dengan user_id
+            $usernameBaru = $username . '@' . $from_id;
+
+            $pelanggan->update([
+                'username_pppoe' => $usernameBaru
+            ]);
+
+            $this->telegram->sendToChat(
+                $chat_id,
+                "✅ Akun berhasil dihubungkan\n\nUsername baru:\n".$usernameBaru
+            );
 
             return response()->json(['status' => 'ok']);
         }
 
-        // jika command tidak dikenal
         $this->telegram->sendToChat(
             $chat_id,
-            "Perintah tidak dikenali.\n\nGunakan:\n/start\n/id"
+            "Perintah tidak dikenal.\nGunakan:\n/start"
         );
 
         return response()->json(['status' => 'ok']);
