@@ -42,7 +42,7 @@ class TelegramController extends Controller
             $msg .= "🆔 User ID Telegram Anda:\n";
             $msg .= $from_id . "\n\n";
             $msg .= "Untuk menghubungkan akun kirim:\n";
-            $msg .= "/kirim tarsiwen@pamayahan";
+            $msg .= "/kirim xxx@lokasi";
 
             $this->telegram->sendToChat($chat_id, $msg);
 
