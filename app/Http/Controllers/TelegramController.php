@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Pelanggan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Services\TelegramService;
@@ -20,6 +19,7 @@ class TelegramController extends Controller
     {
         $data = $request->all();
 
+        // simpan raw data telegram ke log
         Log::info('Telegram Raw Update', $data);
 
         if (!isset($data['message'])) {
@@ -27,41 +27,53 @@ class TelegramController extends Controller
         }
 
         $chatType = $data['message']['chat']['type'] ?? '';
-        $chat_id = $data['message']['chat']['id'] ?? null;
-        $from_id = $data['message']['from']['id'] ?? null;
-        $text = trim($data['message']['text'] ?? '');
+        $chat_id  = $data['message']['chat']['id'] ?? null;
+        $from_id  = $data['message']['from']['id'] ?? null;
+        $text     = trim($data['message']['text'] ?? '');
 
-        // log id user
+        // log info user telegram
         Log::info('Telegram User Info', [
             'from_id' => $from_id,
             'chat_id' => $chat_id,
             'text' => $text
         ]);
 
+        // hanya respon chat private
         if ($chatType !== 'private') {
             return response()->json(['status' => 'ignored']);
         }
 
+        // command /start
         if ($text === '/start') {
-            $this->telegram->sendToChat($chat_id, 'Silakan kirim username PPPoE anda');
+
+            $msg  = "👋 Selamat datang\n\n";
+            $msg .= "Untuk menghubungkan Telegram dengan sistem ISP.\n\n";
+            $msg .= "📌 ID Telegram Anda:\n";
+            $msg .= $from_id."\n\n";
+            $msg .= "Silakan kirim ID ini ke admin untuk diaktifkan.";
+
+            $this->telegram->sendToChat($chat_id, $msg);
+
             return response()->json(['status' => 'ok']);
         }
 
-        $pelanggan = Pelanggan::where('username_pppoe', $text)->first();
+        // command /id
+        if ($text === '/id') {
 
-        if ($pelanggan) {
+            $msg  = "🆔 ID Telegram Anda:\n\n";
+            $msg .= $from_id."\n\n";
+            $msg .= "Kirim ID ini ke admin.";
 
-            $pelanggan->update([
-                'chat_id' => $from_id
-            ]);
+            $this->telegram->sendToChat($chat_id, $msg);
 
-            $this->telegram->sendToChat($chat_id, '✅ Telegram berhasil terhubung');
-
-        } else {
-
-            $this->telegram->sendToChat($chat_id, '❌ Username tidak ditemukan');
-
+            return response()->json(['status' => 'ok']);
         }
+
+        // jika command tidak dikenal
+        $this->telegram->sendToChat(
+            $chat_id,
+            "Perintah tidak dikenali.\n\nGunakan:\n/start\n/id"
+        );
 
         return response()->json(['status' => 'ok']);
     }
