@@ -17,6 +17,7 @@ class SendPppTelegram
 
     public function handle(PppEvent $event): void
     {
+        \Log::info('PppEvent diterima', ['user' => $event->user, 'type' => $event->type]);
         $pelanggan = Pelanggan::where('username_pppoe', $event->user)->first();
         if (!$pelanggan || !$pelanggan->chat_id) return;
 
