@@ -22,7 +22,8 @@ class TelegramController extends Controller
         if (isset($data['message'])) {
            $chatType = $data['message']['chat']['type'] ?? '';
 if ($chatType !== 'private') return; // abaikan group
-$chat_id = $data['message']['from']['id']; // selalu positif
+$chat_id = $data['from']['id']; // selalu positif
+dd($chat_id);
             $text = $data['message']['text'] ?? '';
 
             if ($text == '/start') {
