@@ -19,7 +19,14 @@ class SendPppTelegram
     {
         \Log::info('PppEvent diterima', ['user' => $event->user, 'type' => $event->type]);
         $pelanggan = Pelanggan::where('username_pppoe', $event->user)->first();
+
+        \Log::info('Hasil cari pelanggan', [
+    'username_event' => $event->user,
+    'ditemukan' => $pelanggan ? $pelanggan->id : 'tidak ada'
+]);
         if (!$pelanggan || !$pelanggan->chat_id) return;
+
+
 
         $lastStatus = cache()->get('user_status_'.$event->user);
         if ($lastStatus === $event->type) return;
